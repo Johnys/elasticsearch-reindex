@@ -17,6 +17,7 @@ var multi = new Multiprogress(process.stderr);
 var CPU_COUNT = require('os').cpus().length;
 
 function make_scan_opts(from, cli) {
+  
   if (cli.from_ver === '1.7' || cli.from_ver === '0.90') {
     return {
       index       : from.index,
@@ -171,6 +172,7 @@ if (cluster.isMaster) {
     }
     delete docs[worker.process.pid];
     executionWorkers[worker.process.pid].done();
+    delete executionWorkers[worker.process.pid];
     if (Object.keys(cluster.workers).length === 0) {
       if (bar.total === bar.curr)
         console.log('Reindexing completed sucessfully.');
