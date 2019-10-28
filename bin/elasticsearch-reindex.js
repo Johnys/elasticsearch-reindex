@@ -14,6 +14,8 @@ var cli           = require('commander'),
 
 var multi = new Multiprogress(process.stderr);
 
+var CPU_COUNT = require('os').cpus().length;
+
 function make_scan_opts(from, cli) {
   if (cli.from_ver === '1.7' || cli.from_ver === '0.90') {
     return {
@@ -41,7 +43,7 @@ cli
 .version('1.1.11')
 .option('-f, --from [value]', 'source index, eg. http://192.168.1.100:9200/old_index/old_type')
 .option('-t, --to [value]', 'to index, eg. http://192.168.1.100:9200/new_index/new_type')
-.option('-c, --concurrency [value]', 'concurrency for reindex', require('os').cpus().length)
+.option('-c, --concurrency [value]', 'concurrency for reindex', CPU_COUNT)
 .option('-b, --bulk [value]', 'bulk size for a thread', 100)
 .option('-q, --query_size [value]', 'query size for scroll', 100)
 .option('-s, --scroll [value]', 'default 1m', '1m')
@@ -57,7 +59,7 @@ cli
 .option('-a, --access_key [value]', 'AWS access key', false)
 .option('-k, --secret_key [value]', 'AWS secret ket', false)
 .option('-e, --region [value]', 'AWS region', false)
-.option('-a, --async_forks [value]', 'Amount of async forks to process', require('os').cpus().length)
+.option('--a, --async_forks [value]', 'Amount of async forks to process', CPU_COUNT)
 .parse(process.argv);
 
 for (var key in cli) {
@@ -143,11 +145,12 @@ if (cluster.isMaster) {
   var docs = {};
   var executionWorkers = {};
   async.eachLimit(workers, cli.async_forks, function(args, done) {
-    var worker = cluster.fork({worker_arg:JSON.stringify(args)});
+    let worker = cluster.fork({worker_arg:JSON.stringify(args)});
+    let current = Object.keys(executionWorkers).length + 1;
     executionWorkers[worker.process.pid] = { done };
     worker.on('message', function(msg) {
       if(!executionWorkers[worker.process.pid].bar) {
-        executionWorkers[worker.process.pid].bar = multi.newBar(" reindexing [:bar] :current/:total(:percent) :elapsed :etas", {total:0, width:30});
+        executionWorkers[worker.process.pid].bar = multi.newBar(`reindexing [:bar] :current/:total(:percent) :elapsed :etas ${current}/${workers.length}`, {total:0, width:30});
       }
       let bar = executionWorkers[worker.process.pid].bar;
       if (msg.total) {
@@ -198,7 +201,6 @@ if (cluster.isMaster) {
       res.type = tokens.pop();
       res.index = tokens.pop();
     }
-
     var config = {
       requestTimeout: cli.request_timeout,
       apiVersion: apiVersion,
@@ -241,6 +243,7 @@ if (cluster.isMaster) {
         keepAlive: true,
         maxSockets: 10,
         minSockets: 10,
+        requestTimeout: cli.request_timeout, 
         createNodeAgent: function (connection, config) {
             if("https" === config.hosts[0].protocol) {
             return new AgentKeepAlive.HttpsAgent(connection.makeAgentConfig(config));
