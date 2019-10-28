@@ -7,9 +7,12 @@ var cli           = require('commander'),
     moment        = require('moment'),
     _             = require('underscore'),
     bunyan        = require('bunyan'),
-    ProgressBar   = require('progress'),
+    Multiprogress = require("multi-progress"),
     fs            = require('fs'),
-    Indexer       = require('../lib/indexer');
+    Indexer       = require('../lib/indexer'),
+    async     = require('async');
+
+var multi = new Multiprogress(process.stderr);
 
 function make_scan_opts(from, cli) {
   if (cli.from_ver === '1.7' || cli.from_ver === '0.90') {
@@ -54,6 +57,7 @@ cli
 .option('-a, --access_key [value]', 'AWS access key', false)
 .option('-k, --secret_key [value]', 'AWS secret ket', false)
 .option('-e, --region [value]', 'AWS region', false)
+.option('-a, --async_forks [value]', 'Amount of async forks to process', require('os').cpus().length)
 .parse(process.argv);
 
 for (var key in cli) {
@@ -136,11 +140,16 @@ if (cluster.isMaster) {
 
   console.log("Starting reindex in " + workers.length + " shards.")
   if (workers.length > 1 & cli.max_docs > -1) console.log("Warning: every worker in his range will only index limited documents when max_docs used");
-  var bar = new ProgressBar(" reindexing [:bar] :current/:total(:percent) :elapsed :etas - :shards/"+workers.length+" working", {total:0, width:30});
   var docs = {};
-  workers.forEach(function(args) {
+  var executionWorkers = {};
+  async.eachLimit(workers, cli.async_forks, function(args, done) {
     var worker = cluster.fork({worker_arg:JSON.stringify(args)});
+    executionWorkers[worker.process.pid] = { done };
     worker.on('message', function(msg) {
+      if(!executionWorkers[worker.process.pid].bar) {
+        executionWorkers[worker.process.pid].bar = multi.newBar(" reindexing [:bar] :current/:total(:percent) :elapsed :etas", {total:0, width:30});
+      }
+      let bar = executionWorkers[worker.process.pid].bar;
       if (msg.total) {
         var cnt = Object.keys(docs).length;
         docs[msg.pid] = msg.total;
@@ -148,7 +157,7 @@ if (cluster.isMaster) {
           bar.total = bar.total + msg.total;
         }
       }
-      else bar.tick(msg.success, {shards: Object.keys(docs).length});
+      else  bar.tick(msg.success, {shards: Object.keys(docs).length});
     });
   });
 
@@ -156,13 +165,9 @@ if (cluster.isMaster) {
     if( signal ) {
       logger.fatal("worker was killed by signal: "+signal);
       console.log("worker was killed by signal: "+signal);
-    } else if( code !== 0 ) {
-      logger.fatal("worker exited with error code: "+code);
-      console.log("worker exited with error code: "+code);
     }
-
     delete docs[worker.process.pid];
-
+    executionWorkers[worker.process.pid].done();
     if (Object.keys(cluster.workers).length === 0) {
       if (bar.total === bar.curr)
         console.log('Reindexing completed sucessfully.');
