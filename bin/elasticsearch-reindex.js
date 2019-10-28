@@ -297,7 +297,7 @@ if (cluster.isMaster) {
       if (err.message instanceof Error) {
         err = err.message;
       }
-      logger.fatal(err);
+      logger.fatal(JSON.stringify({ err, worker_arg }));
       if (err.message.indexOf('parse') > -1) {
         console.log(err);
         throw new Error("Scroll body parsing error, query_size param is possibly too high.");
@@ -330,7 +330,7 @@ if (cluster.isMaster) {
       parent      : cli.parent
     }, function(err) {
       if (err) {
-        logger.fatal(err);
+        logger.fatal(JSON.stringify({ err, worker_arg }));
         return console.log("\nReindex error: " + err);
       }
       if (processed_total < total) {
