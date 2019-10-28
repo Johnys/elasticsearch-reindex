@@ -12,7 +12,9 @@ var cli           = require('commander'),
     Indexer       = require('../lib/indexer'),
     async     = require('async');
 
-var multi = new Multiprogress(process.stdout);
+const file = fs.createWriteStream('./reindex-out.log');
+
+var multi = new Multiprogress(file);
 
 var CPU_COUNT = require('os').cpus().length;
 
