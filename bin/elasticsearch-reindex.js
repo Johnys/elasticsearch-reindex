@@ -12,7 +12,7 @@ var cli           = require('commander'),
     Indexer       = require('../lib/indexer'),
     async     = require('async');
 
-var multi = new Multiprogress(process.stderr);
+var multi = new Multiprogress(process.stdout);
 
 var CPU_COUNT = require('os').cpus().length;
 
