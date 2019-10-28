@@ -172,7 +172,6 @@ if (cluster.isMaster) {
     }
     delete docs[worker.process.pid];
     executionWorkers[worker.process.pid].done();
-    delete executionWorkers[worker.process.pid];
     if (Object.keys(cluster.workers).length === 0) {
       if (bar.total === bar.curr)
         console.log('Reindexing completed sucessfully.');
