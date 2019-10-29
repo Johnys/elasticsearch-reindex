@@ -332,7 +332,7 @@ if (cluster.isMaster) {
     }, function(err) {
       if (err) {
         logger.fatal(JSON.stringify({ err, worker_arg }));
-        return console.log("\nReindex error: " + err);
+        console.log("\nReindex error: " + err);
       }
       if (processed_total < total) {
         from.client.scroll({
