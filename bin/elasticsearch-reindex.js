@@ -14,7 +14,7 @@ var cli           = require('commander'),
 
 const file = fs.createWriteStream('./reindex-out.log');
 
-var multi = new Multiprogress(file);
+var multi = new Multiprogress(console.stdout);
 
 var CPU_COUNT = require('os').cpus().length;
 
@@ -172,6 +172,7 @@ if (cluster.isMaster) {
       logger.fatal("worker was killed by signal: "+signal);
       console.log("worker was killed by signal: "+signal);
     }
+    let bar = executionWorkers[worker.process.pid].bar;
     delete docs[worker.process.pid];
     executionWorkers[worker.process.pid].done();
     if (Object.keys(cluster.workers).length === 0) {
