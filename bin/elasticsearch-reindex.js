@@ -153,7 +153,7 @@ if (cluster.isMaster) {
     executionWorkers[worker.process.pid] = { done };
     worker.on('message', function(msg) {
       if(!executionWorkers[worker.process.pid].bar) {
-        executionWorkers[worker.process.pid].bar = multi.newBar(`reindexing [:bar] :current/:total(:percent) :elapsed :etas ${current}/${workers.length}`, {total:0, width:30});
+        executionWorkers[worker.process.pid].bar = multi.newBar(`reindexing [:bar] :current/:total(:percent) :elapsed :etas ${current}/${workers.length} ${args}`, {total:0, width:30});
       }
       let bar = executionWorkers[worker.process.pid].bar;
       if (msg.total) {
