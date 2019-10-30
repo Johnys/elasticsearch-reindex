@@ -176,7 +176,7 @@ if (cluster.isMaster) {
     delete docs[worker.process.pid];
     executionWorkers[worker.process.pid].done();
     if (Object.keys(cluster.workers).length === 0) {
-      if (bar.total === bar.curr)
+      if (bar && bar.total === bar.curr)
         console.log('Reindexing completed sucessfully.');
       else
         console.log('Failed to reindex ' + (bar.total - bar.curr) + ' (~'+ Math.round((100-(bar.curr/bar.total)*100)*1000)/1000 +'%) documents.');
