@@ -176,10 +176,13 @@ if (cluster.isMaster) {
     delete docs[worker.process.pid];
     executionWorkers[worker.process.pid].done();
     if (Object.keys(cluster.workers).length === 0) {
-      if (bar && bar.total === bar.curr)
+      if (bar){
+        if (bar.total === bar.curr)
         console.log('Reindexing completed sucessfully.');
       else
         console.log('Failed to reindex ' + (bar.total - bar.curr) + ' (~'+ Math.round((100-(bar.curr/bar.total)*100)*1000)/1000 +'%) documents.');
+      }
+      console.log('Ended');
     }
   });
 } else {
@@ -292,9 +295,7 @@ if (cluster.isMaster) {
   reindexer.on('batch-complete', function(num_of_success) {
     process.send({success: num_of_success});
   });
-  console.time('search');
   from.client.search(scan_options, function scroll_fetch(err, res) {
-    console.timeEnd('search');
     if (err) {
       if (err.message instanceof Error) {
         err = err.message;
@@ -322,7 +323,6 @@ if (cluster.isMaster) {
       docs = docs.slice(0, total - processed_total);
       processed_total = total;
     }
-    console.time('reindex');
     reindexer[reindexMethod](docs, {
       concurrency : cli.concurrency,
       bulk        : cli.bulk,
@@ -332,13 +332,12 @@ if (cluster.isMaster) {
       type        : to.type,
       parent      : cli.parent
     }, function(err) {
-      console.timeEnd('reindex');
       if (err) {
         logger.fatal(JSON.stringify({ err, worker_arg }));
         console.log("\nReindex error: " + err);
       }
       if (processed_total < total) {
-        console.time('search');
+        
         from.client.scroll({
           scroll_id : res._scroll_id,
           scroll : cli.scroll
